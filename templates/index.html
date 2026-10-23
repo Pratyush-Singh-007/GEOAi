@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoAI Outdoor Assistant</title>
+    <!-- Fonts & Leaflet Map -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --dark: #0f172a;
+            --dark-card: #1e293b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --purple: #8b5cf6;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* ── Top Navigation Bar ─────────────────────────────── */
+        .navbar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            padding: 0.85rem 1.5rem;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .brand-icon {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 12px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .brand-text h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-text span {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: block;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.5rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-nav:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-nav-primary {
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            border: none;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-nav-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8, #6d28d9);
+        }
+
+        .live-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* ── Container & Hero ───────────────────────────────── */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.25rem 4rem;
+        }
+
+        .hero-banner {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .hero-banner h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .hero-banner p {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        /* ── Search & Query Box ─────────────────────────────── */
+        .search-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 1.75rem;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--border);
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+        }
+
+        .search-textarea {
+            width: 100%;
+            min-height: 95px;
+            padding: 1rem 1.25rem;
+            font-size: 1.05rem;
+            font-family: inherit;
+            color: var(--dark);
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            resize: vertical;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-textarea:focus {
+            background: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+        }
+
+        .search-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .quick-filters {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #f1f5f9;
+            color: #475569;
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid #cbd5e1;
+            transition: all 0.15s;
+            user-select: none;
+        }
+
+        .filter-chip:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .filter-chip.active {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-color: #93c5fd;
+            font-weight: 600;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 0.85rem 1.85rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+            transition: all 0.2s;
+        }
+
+        .btn-submit:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+
+
+        /* ── Loading Animation ──────────────────────────────── */
+        .loading-state {
+            display: none;
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            text-align: center;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+        }
+
+        .spinner-outer {
+            width: 54px;
+            height: 54px;
+            border: 4px solid #e2e8f0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.9s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+            margin: 0 auto 1.25rem;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.4rem;
+        }
+
+        .loading-subtext {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Results Section ────────────────────────────────── */
+        .results-section {
+            display: none;
+        }
+
+        /* 4-Card Live KPI Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .kpi-temp .kpi-icon { background: #fef3c7; }
+        .kpi-aqi .kpi-icon { background: #dbeafe; }
+        .kpi-wind .kpi-icon { background: #e0e7ff; }
+        .kpi-sun .kpi-icon { background: #ffedd5; }
+
+        .kpi-val {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--dark);
+            letter-spacing: -0.02em;
+        }
+
+        .kpi-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* Map and Venue Split Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 1.5rem;
+            margin-bottom: 1.75rem;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Leaflet Map */
+        #map {
+            height: 420px;
+            width: 100%;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        /* Leaderboard / Venues */
+        .venues-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            max-height: 420px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
+
+        .venue-item {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1rem;
+            background: #ffffff;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .venue-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-sm);
+            transform: translateY(-1px);
+        }
+
+        .venue-item.top-ranked {
+            border: 2px solid #fbbf24;
+            background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+        }
+
+        .venue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.4rem;
+        }
+
+        .venue-name {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .venue-badge-pill {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+        }
+
+        .score-excellent { background: #d1fae5; color: #065f46; }
+        .score-good { background: #dbeafe; color: #1e40af; }
+        .score-fair { background: #fef3c7; color: #92400e; }
+        .score-avoid { background: #fee2e2; color: #991b1b; }
+
+        .venue-meta {
+            font-size: 0.83rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .venue-notes {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .note-tag {
+            font-size: 0.8rem;
+            color: #334155;
+            background: #f1f5f9;
+            padding: 0.2rem 0.55rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .note-warning {
+            background: #fff1f2;
+            color: #be123c;
+            font-weight: 600;
+        }
+
+        /* ── Assistant Text & Avoid Box ─────────────────────── */
+        .assistant-response-box {
+            background: #f8fafc;
+            border-radius: 14px;
+            padding: 1.25rem;
+            border-left: 4px solid var(--primary);
+            line-height: 1.65;
+            font-size: 0.95rem;
+            margin-bottom: 1.25rem;
+            white-space: pre-wrap;
+        }
+
+        .assistant-response-box h2 { font-size: 1.15rem; margin: 0.85rem 0 0.35rem; color: var(--dark); }
+        .assistant-response-box h3 { font-size: 1rem; margin: 0.65rem 0 0.25rem; color: var(--dark); }
+
+        .avoid-banner {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            color: #991b1b;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .avoid-banner h4 { font-size: 0.92rem; font-weight: 700; margin-bottom: 0.2rem; }
+        .avoid-banner p { font-size: 0.85rem; }
+
+        .metadata-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* ── 8-Slide Presentation Modal ─────────────────────── */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            animation: modalPop 0.2s ease-out;
+        }
+
+        @keyframes modalPop {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 1rem 1.5rem;
+            background: var(--dark);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 { font-size: 1.1rem; font-weight: 700; }
+
+        .modal-body {
+            padding: 2rem;
+            overflow-y: auto;
+            flex: 1;
+            background: #f8fafc;
+        }
+
+        .slide-frame {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+            min-height: 380px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .slide-num {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .slide-heading {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 1rem;
+        }
+
+        .slide-body {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: #334155;
+            flex: 1;
+        }
+
+        .slide-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background: white;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-modal {
+            background: #f1f5f9;
+            color: #0f172a;
+            border: 1px solid #cbd5e1;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-modal:hover { background: #e2e8f0; }
+
+        .btn-modal-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-modal-primary:hover { background: var(--primary-hover); }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── Top Navbar ──────────────────────────────────────── -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="brand">
+                <div class="brand-icon">🌤️</div>
+                <div class="brand-text">
+                    <h1>GeoAI Outdoor Assistant</h1>
+                </div>
+            </a>
+        </div>
+    </nav>
+
+    <!-- ── Main Container ─────────────────────────────────── -->
+    <div class="main-container">
+        
+        <div class="hero-banner">
+            <h2>Where & When Should You Head Outdoors?</h2>
+            <p>Spatiotemporal outdoor recommendations grounded in live Open-Meteo weather, WAQI air quality, and OpenStreetMap geospatial context.</p>
+        </div>
+
+        <!-- ── Search & Filter Box ────────────────────────── -->
+        <div class="search-card">
+            <div class="search-input-wrapper">
+                <textarea 
+                    id="query" 
+                    class="search-textarea" 
+                    placeholder="Ask freely in natural language...&#10;e.g., 'Where can I go running tomorrow evening near Koregaon Park?' or 'I have mild asthma, morning walk in Powai'"></textarea>
+            </div>
+
+            <div class="search-controls">
+                <div class="quick-filters">
+                    <button type="button" id="locBtn" class="filter-chip" onclick="useCurrentLocation()" style="font-weight:700; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;">
+                        📍 Use My GPS Location
+                    </button>
+                    <span style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-left:0.5rem; margin-right:0.25rem;">Health Profiles:</span>
+                    <span class="filter-chip" onclick="toggleFilter(this, 'mild asthma')">🫁 Mild Asthma</span>
+                    <span class="filter-chip" onclick="toggleFilter(this, 'for elderly parents')">👴 Elderly / Senior</span>
+                    <span class="filter-chip" onclick="toggleFilter(this, 'with young kids')">👶 Kids / Family</span>
+                    <span class="filter-chip" onclick="toggleFilter(this, 'within 15 km')">📍 15 km Radius</span>
+                </div>
+                <button id="askBtn" class="btn-submit" onclick="askAssistant()">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <span>Analyze & Recommend</span>
+                </button>
+            </div>
+
+
+        </div>
+
+        <!-- ── Loading State ──────────────────────────────── -->
+        <div class="loading-state" id="loading">
+            <div class="spinner-outer"></div>
+            <div class="loading-text">Synthesizing Geospatial Context & Live Meteorology...</div>
+            <div class="loading-subtext">Fetching OpenStreetMap POIs · Open-Meteo Forecasts · WAQI Air Quality · OSRM Routing</div>
+        </div>
+
+        <!-- ── Results Section ────────────────────────────── -->
+        <div class="results-section" id="results">
+            
+            <!-- Live 4-Card Weather & AQI Status -->
+            <div class="kpi-grid">
+                <div class="kpi-card kpi-temp">
+                    <div class="kpi-icon">🌡️</div>
+                    <div>
+                        <div class="kpi-val" id="kpiTemp">--°C</div>
+                        <div class="kpi-label" id="kpiFeel">Feels like --°C</div>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-aqi">
+                    <div class="kpi-icon">🌬️</div>
+                    <div>
+                        <div class="kpi-val" id="kpiAqi">AQI --</div>
+                        <div class="kpi-label" id="kpiAqiStatus">Air Quality</div>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-wind">
+                    <div class="kpi-icon">💨</div>
+                    <div>
+                        <div class="kpi-val" id="kpiWind">-- km/h</div>
+                        <div class="kpi-label" id="kpiWindDir">Wind Direction</div>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-sun">
+                    <div class="kpi-icon">🌅</div>
+                    <div>
+                        <div class="kpi-val" id="kpiSun">-- / --</div>
+                        <div class="kpi-label">Sunrise · Sunset</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Times to Avoid Banner (if applicable) -->
+            <div class="avoid-banner" id="avoidBanner" style="display:none;">
+                <div style="font-size:1.5rem;">⚠️</div>
+                <div>
+                    <h4>Times & Conditions to Avoid:</h4>
+                    <p id="avoidText"></p>
+                </div>
+            </div>
+
+            <!-- Interactive Map & Venues Grid -->
+            <div class="dashboard-grid">
+                <!-- Map Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span>🗺️ Geospatial Analysis Map</span>
+                        </div>
+                        <div id="mapWindBadge" style="font-size:0.8rem; font-weight:600; color:var(--primary);"></div>
+                    </div>
+                    <div id="map"></div>
+                </div>
+
+                <!-- Venues Leaderboard Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span>🏆 Ranked Outdoor Venues</span>
+                        </div>
+                        <span id="activityTag" style="font-size:0.8rem; background:#f1f5f9; padding:0.25rem 0.6rem; border-radius:6px; font-weight:600; text-transform:capitalize;"></span>
+                    </div>
+                    <div class="venues-list" id="venuesList"></div>
+                </div>
+            </div>
+
+            <!-- Natural Language Assistant Recommendation -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>🤖 Grounded Assistant Synthesis</span>
+                    </div>
+                    <button class="btn-nav" style="color:var(--text-main); background:#f1f5f9; border-color:#cbd5e1;" onclick="copyResponse()">
+                        📋 Copy Advice
+                    </button>
+                </div>
+                <div class="assistant-response-box" id="responseText"></div>
+
+                <div class="metadata-footer">
+                    <div id="metaDetails"></div>
+                    <div id="sourcesText"></div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ── Scripts ────────────────────────────────────────── -->
+    <script>
+        // ── Main UI Execution Logic ─────────────────────────
+        function toggleFilter(el, keyword) {
+            el.classList.toggle('active');
+            const q = document.getElementById('query');
+            if (el.classList.contains('active')) {
+                if (!q.value.toLowerCase().includes(keyword.toLowerCase())) {
+                    q.value = q.value.trim() ? `${q.value.trim()}, ${keyword}` : keyword;
+                }
+            } else {
+                q.value = q.value.replace(new RegExp(`,?\\s*${keyword}`, 'gi'), '').trim();
+            }
+        }
+
+        let mapInstance = null;
+        let markersLayer = null;
+        let userGps = null;
+
+        function useCurrentLocation() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
+            const btn = document.getElementById("locBtn");
+            btn.innerHTML = "⏳ Detecting GPS...";
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    userGps = {
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude
+                    };
+                    btn.innerHTML = "📍 GPS Active ✓";
+                    btn.style.background = "#10b981";
+                    btn.style.color = "white";
+                    btn.style.borderColor = "#059669";
+                    
+                    const qInput = document.getElementById("query");
+                    if (!qInput.value.trim() || qInput.value.toLowerCase().includes("near me") || qInput.value.toLowerCase().includes("my location")) {
+                        qInput.value = "Best outdoor places for a walk near my location";
+                    }
+                },
+                (err) => {
+                    btn.innerHTML = "📍 GPS Denied";
+                    btn.style.background = "#fee2e2";
+                    btn.style.color = "#dc2626";
+                    btn.style.borderColor = "#fca5a5";
+                    alert("Location access was denied or unavailable (" + err.message + "). You can still type any place name in the search box.");
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        }
+
+        async function askAssistant() {
+            const query = document.getElementById('query').value.trim();
+            if (!query) return;
+
+            const btn = document.getElementById('askBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+
+            btn.disabled = true;
+            loading.style.display = 'block';
+            results.style.display = 'none';
+
+            try {
+                const payload = { query };
+                if (userGps) {
+                    payload.user_lat = userGps.lat;
+                    payload.user_lon = userGps.lon;
+                }
+
+                const resp = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload),
+                });
+
+                if (!resp.ok) throw new Error(`Server returned HTTP ${resp.status}`);
+                const data = await resp.json();
+                displayResults(data);
+            } catch (err) {
+                alert('Analysis Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const results = document.getElementById('results');
+            results.style.display = 'block';
+
+            // 1. KPI Cards
+            const topRec = data.recommendations && data.recommendations.length > 0 ? data.recommendations[0] : null;
+            if (topRec && topRec.weather_summary) {
+                const w = topRec.weather_summary;
+                document.getElementById('kpiTemp').textContent = `${w.temp !== null ? w.temp : '--'}°C`;
+                document.getElementById('kpiFeel').textContent = `Feels like ${w.feels_like !== null ? w.feels_like : '--'}°C`;
+                document.getElementById('kpiWind').textContent = `${w.wind_speed !== null ? w.wind_speed : '--'} km/h`;
+                document.getElementById('kpiWindDir').innerHTML = `Wind: ${w.wind_direction !== null ? w.wind_direction + '°' : '--'} <span style="display:inline-block; transform:rotate(${w.wind_direction || 0}deg);">↓</span>`;
+            }
+
+            // Air Quality KPI
+            if (data.recommendations && data.recommendations[0] && data.recommendations[0].notes) {
+                const aqiNote = data.recommendations[0].notes.find(n => n.includes('AQI'));
+                if (aqiNote) {
+                    const match = aqiNote.match(/AQI\s*(\d+)/i);
+                    const val = match ? match[1] : '--';
+                    document.getElementById('kpiAqi').textContent = `AQI ${val}`;
+                    document.getElementById('kpiAqiStatus').textContent = aqiNote.split('—')[0] || 'Air Quality';
+                }
+            }
+
+            // Sunrise & Sunset
+            const daylightNote = topRec && topRec.notes ? topRec.notes.find(n => n.includes('Sunset')) : null;
+            document.getElementById('kpiSun').textContent = daylightNote ? daylightNote.replace('Sunset ~', '🌇 ') : 'Daylight Checked';
+
+            // 2. Times to Avoid Banner
+            const avoidBanner = document.getElementById('avoidBanner');
+            if (data.avoid && data.avoid.length > 0) {
+                avoidBanner.style.display = 'flex';
+                document.getElementById('avoidText').innerHTML = data.avoid.map(a => 
+                    `<strong>${a.place_name}</strong> at ${formatTime(a.time_slot)}: ${a.reason}`
+                ).join('<br>');
+            } else {
+                avoidBanner.style.display = 'none';
+            }
+
+            // 3. Ranked Venues
+            const venuesList = document.getElementById('venuesList');
+            venuesList.innerHTML = '';
+            document.getElementById('activityTag').textContent = data.parsed.activity || 'Outdoor Activity';
+
+            if (data.recommendations && data.recommendations.length > 0) {
+                data.recommendations.forEach((rec, idx) => {
+                    const isTop = idx === 0;
+                    const score = Math.round(rec.composite_score || 0);
+                    const badgeClass = score >= 80 ? 'score-excellent' : (score >= 65 ? 'score-good' : (score >= 50 ? 'score-fair' : 'score-avoid'));
+
+                    const card = document.createElement('div');
+                    card.className = `venue-item ${isTop ? 'top-ranked' : ''}`;
+                    const searchTarget = (data.location && data.location.name) ? data.location.name : (data.parsed.location || 'search target');
+                    const isGpsSearch = (data.location && data.location.is_gps);
+                    let distStr = '';
+                    if (!rec.distance_km || rec.distance_km <= 0.05) {
+                        distStr = isGpsSearch ? 'At your GPS position' : `At ${searchTarget} center`;
+                    } else if (isGpsSearch) {
+                        distStr = `${rec.distance_km} km from your current GPS location`;
+                    } else {
+                        distStr = `${rec.distance_km} km from ${searchTarget} center`;
+                    }
+                    card.innerHTML = `
+                        <div class="venue-header">
+                            <div>
+                                ${isTop ? '<span style="font-size:0.75rem; font-weight:700; color:#d97706; text-transform:uppercase;">🏆 Prime Match</span>' : ''}
+                                <div class="venue-name">${rec.place_name}</div>
+                            </div>
+                            <span class="venue-badge-pill ${badgeClass}">Score: ${score}/100</span>
+                        </div>
+                        <div class="venue-meta">
+                            <span>📍 ${distStr}</span>
+                            <span>🏷️ ${rec.place_type}</span>
+                            <span>⏰ Best Time: ${formatTime(rec.time_slot)}</span>
+                        </div>
+                        <div class="venue-notes">
+                            ${(rec.notes || []).slice(0, 3).map(n => {
+                                const isWarn = n.includes('⚠️') || n.includes('inhaler') || n.includes('rush hour');
+                                return `<span class="note-tag ${isWarn ? 'note-warning' : ''}">${n}</span>`;
+                            }).join('')}
+                        </div>
+                    `;
+                    venuesList.appendChild(card);
+                });
+            } else {
+                venuesList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">No venues found for the given criteria.</p>';
+            }
+
+            // 4. Grounded Assistant Text
+            document.getElementById('responseText').innerHTML = renderMarkdown(data.response_text);
+
+            // 5. Metadata
+            document.getElementById('metaDetails').innerHTML = `
+                ⏱️ Latency: <strong>${data.processing_time_seconds}s</strong> &nbsp;·&nbsp;
+                🤖 SLM: <strong>${data.model_info.model_id}</strong> &nbsp;·&nbsp;
+                🎯 Intent: <strong>${data.parsed.activity}</strong> &nbsp;·&nbsp;
+                📍 Anchor: <strong>${data.parsed.location || 'Resolved'}</strong>
+            `;
+            document.getElementById('sourcesText').innerHTML = `Sources: ${data.data_sources.join(' · ')}`;
+
+            // 6. Interactive Leaflet Map
+            renderMap(data);
+        }
+
+        function renderMap(data) {
+            if (!data.location || !data.location.lat) return;
+            const centerLat = data.location.lat;
+            const centerLon = data.location.lon;
+
+            if (!mapInstance) {
+                mapInstance = L.map('map').setView([centerLat, centerLon], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(mapInstance);
+                markersLayer = L.layerGroup().addTo(mapInstance);
+            } else {
+                markersLayer.clearLayers();
+                mapInstance.setView([centerLat, centerLon], 13);
+            }
+
+            // Origin marker (Blue pulsing dot)
+            L.circleMarker([centerLat, centerLon], {
+                radius: 10,
+                fillColor: '#2563eb',
+                color: '#ffffff',
+                weight: 3,
+                opacity: 1,
+                fillOpacity: 1
+            }).bindPopup(`<b>📍 Query Origin</b><br>${data.location.display_name.split(',').slice(0, 3).join(',')}`).addTo(markersLayer);
+
+            // Search radius circle
+            const radiusMeters = (data.parsed.radius_km || 10) * 1000;
+            L.circle([centerLat, centerLon], {
+                radius: radiusMeters,
+                color: '#3b82f6',
+                weight: 1.5,
+                dashArray: '5, 8',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.04
+            }).addTo(markersLayer);
+
+            const bounds = [[centerLat, centerLon]];
+
+            if (data.recommendations) {
+                data.recommendations.forEach(rec => {
+                    if (rec.lat && rec.lon) {
+                        bounds.push([rec.lat, rec.lon]);
+                        const score = rec.composite_score || 0;
+                        const markerColor = score >= 80 ? '#10b981' : (score >= 65 ? '#2563eb' : (score >= 50 ? '#f59e0b' : '#ef4444'));
+
+                        const searchTarget = (data.location && data.location.name) ? data.location.name : (data.parsed.location || 'search target');
+                        const isGpsSearch = (data.location && data.location.is_gps);
+                        let distStr = '';
+                        if (!rec.distance_km || rec.distance_km <= 0.05) {
+                            distStr = isGpsSearch ? 'At your GPS position' : `At ${searchTarget} center`;
+                        } else if (isGpsSearch) {
+                            distStr = `${rec.distance_km} km from your current GPS location`;
+                        } else {
+                            distStr = `${rec.distance_km} km from ${searchTarget} center`;
+                        }
+                        L.circleMarker([rec.lat, rec.lon], {
+                            radius: 8,
+                            fillColor: markerColor,
+                            color: '#ffffff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.95
+                        }).bindPopup(`
+                            <div style="min-width: 190px;">
+                                <h4 style="margin:0 0 4px; font-size:14px; font-weight:700;">${rec.place_name}</h4>
+                                <div style="font-size:12px; color:#64748b; margin-bottom:4px;">
+                                    ${rec.place_type} · ${distStr}
+                                </div>
+                                <div style="font-weight:700; color:${markerColor}; font-size:13px; margin-bottom:6px;">
+                                    Score: ${Math.round(score)}/100 (${rec.label})
+                                </div>
+                                <div style="font-size:11px; background:#f8fafc; padding:4px 6px; border-radius:4px; margin-bottom:4px;">
+                                    🌡️ ${rec.weather_summary.temp || '--'}°C · 💨 ${rec.weather_summary.wind_speed || '--'} km/h
+                                </div>
+                                <div style="font-size:11px; color:#475569;">
+                                    ${(rec.notes || []).slice(0, 2).map(n => `• ${n}`).join('<br>')}
+                                </div>
+                            </div>
+                        `).addTo(markersLayer);
+
+                        L.polyline([[centerLat, centerLon], [rec.lat, rec.lon]], {
+                            color: markerColor,
+                            weight: 1.5,
+                            dashArray: '3, 6',
+                            opacity: 0.5
+                        }).addTo(markersLayer);
+                    }
+                });
+            }
+
+            if (bounds.length > 1) {
+                mapInstance.fitBounds(bounds, { padding: [50, 50] });
+            }
+
+            setTimeout(() => { mapInstance.invalidateSize(); }, 250);
+        }
+
+        function formatTime(timeStr) {
+            try {
+                const d = new Date(timeStr);
+                return d.toLocaleString('en-IN', {
+                    weekday: 'short', day: 'numeric', month: 'short',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch { return timeStr; }
+        }
+
+        function renderMarkdown(text) {
+            return text
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^- (.+)$/gm, '<p style="padding-left:1rem; margin-bottom:0.25rem;">• $1</p>')
+                .replace(/^---$/gm, '<hr style="margin:1rem 0; border:none; border-top:1px solid #e2e8f0">')
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function copyResponse() {
+            const text = document.getElementById('responseText').innerText;
+            navigator.clipboard.writeText(text);
+            alert('Recommendation copied to clipboard!');
+        }
+
+        document.getElementById('query').addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') askAssistant();
+        });
+    </script>
+</body>
+</html>
